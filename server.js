@@ -1,4 +1,4 @@
-// backend/server.js - Main Express Server
+// backend/server.js - EMERGENCY CORS FIX
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -9,54 +9,19 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ============================================
-// MIDDLEWARE
+// EMERGENCY CORS FIX - ALLOW ALL ORIGINS
 // ============================================
-
-// CORS Configuration - Allow multiple origins
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:5173'
-].filter(Boolean);
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-    
-    // Allow all localhost/127.0.0.1 origins in development
-    if (origin && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
-      return callback(null, true);
-    }
-    
-    // Check against allowed origins list
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      return callback(null, true);
-    } else {
-      // In development, log but allow
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('⚠️ CORS allowing origin in dev mode:', origin);
-        return callback(null, true);
-      }
-      console.log('❌ CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+app.use(cors({
+  origin: '*', // Allow all origins temporarily
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   exposedHeaders: ['Content-Length', 'X-Request-Id'],
-  optionsSuccessStatus: 200,
-  preflightContinue: false
-};
+  optionsSuccessStatus: 200
+}));
 
-// Handle preflight requests
-app.options('*', cors(corsOptions));
-
-// Apply CORS to all routes
-app.use(cors(corsOptions));
+// Handle preflight
+app.options('*', cors());
 
 // Body Parser
 app.use(bodyParser.json());
@@ -66,7 +31,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   if (req.method === 'OPTIONS') {
-    console.log('  ↳ Preflight request from:', req.headers.origin);
+    console.log('  ↳ Preflight from:', req.headers.origin);
   }
   next();
 });
@@ -75,7 +40,6 @@ app.use((req, res, next) => {
 // ROUTES
 // ============================================
 
-// Health Check
 app.get('/', (req, res) => {
   res.json({
     success: true,
@@ -85,7 +49,6 @@ app.get('/', (req, res) => {
   });
 });
 
-// Health Check Endpoint
 app.get('/health', (req, res) => {
   res.json({
     success: true,
@@ -95,7 +58,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API Info Endpoint
 app.get('/api', (req, res) => {
   res.json({
     success: true,
@@ -108,14 +70,12 @@ app.get('/api', (req, res) => {
   });
 });
 
-// Payment Routes
 app.use('/api/payment', paymentRoutes);
 
 // ============================================
 // ERROR HANDLING
 // ============================================
 
-// 404 Handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -124,19 +84,8 @@ app.use((req, res) => {
   });
 });
 
-// Global Error Handler
 app.use((err, req, res, next) => {
   console.error('❌ Error:', err.message);
-  
-  // CORS errors
-  if (err.message === 'Not allowed by CORS') {
-    return res.status(403).json({
-      success: false,
-      error: 'CORS policy error',
-      message: 'Origin not allowed'
-    });
-  }
-  
   res.status(err.status || 500).json({
     success: false,
     error: err.message || 'Internal server error',
@@ -153,33 +102,20 @@ app.listen(PORT, () => {
   console.log('===========================================');
   console.log('🚀 GroupBuy Backend Server Started');
   console.log('===========================================');
-  console.log(`📡 Server running on port: ${PORT}`);
+  console.log(`📡 Server: http://localhost:${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Allowed Origins:`);
-  allowedOrigins.forEach(origin => {
-    console.log(`   - ${origin}`);
-  });
-  console.log(`💳 Razorpay Mode: ${process.env.RAZORPAY_KEY_ID?.includes('test') ? 'TEST' : 'LIVE'}`);
-  console.log('===========================================');
-  console.log('');
-  console.log('Available endpoints:');
-  console.log('  GET  /              - API info');
-  console.log('  GET  /health        - Health check');
-  console.log('  POST /api/payment/create-order');
-  console.log('  POST /api/payment/verify');
-  console.log('  POST /api/payment/refund');
-  console.log('  GET  /api/payment/:paymentId');
+  console.log(`🔓 CORS: ALLOW ALL (Emergency mode)`);
+  console.log(`💳 Razorpay: ${process.env.RAZORPAY_KEY_ID?.includes('test') ? 'TEST' : 'LIVE'}`);
   console.log('===========================================');
   console.log('');
 });
 
-// Graceful Shutdown
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received. Shutting down gracefully...');
+  console.log('Shutting down gracefully...');
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('SIGINT received. Shutting down gracefully...');
+  console.log('Shutting down gracefully...');
   process.exit(0);
 });
