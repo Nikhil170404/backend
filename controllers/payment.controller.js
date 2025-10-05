@@ -9,6 +9,12 @@ const { validatePaymentVerification } = require('razorpay/dist/utils/razorpay-ut
 // ============================================
 exports.createOrder = async (req, res) => {
   try {
+    console.log('📥 Create order request received:', {
+      amount: req.body.amount,
+      currency: req.body.currency,
+      origin: req.headers.origin
+    });
+
     const { amount, currency, receipt, notes } = req.body;
 
     // Validation
@@ -69,6 +75,8 @@ exports.createOrder = async (req, res) => {
 // ============================================
 exports.verifyPayment = async (req, res) => {
   try {
+    console.log('📥 Verify payment request received');
+
     const {
       razorpay_order_id,
       razorpay_payment_id,
