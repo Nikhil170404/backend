@@ -18,8 +18,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://127.0.0.1:3000',
-  'http://127.0.0.1:5173',
-  process.env.FRONTEND_URL
+  'http://127.0.0.1:5173'
 ].filter(Boolean);
 
 const corsOptions = {
@@ -34,18 +33,29 @@ const corsOptions = {
     
     // Check against allowed origins list
     if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
+      return callback(null, true);
     } else {
+      // In development, log but allow
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('⚠️ CORS allowing origin in dev mode:', origin);
+        return callback(null, true);
+      }
       console.log('❌ CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'X-Request-Id'],
+  optionsSuccessStatus: 200,
+  preflightContinue: false
 };
 
+// Handle preflight requests
+app.options('*', cors(corsOptions));
+
+// Apply CORS to all routes
 app.use(cors(corsOptions));
 
 // Body Parser
@@ -55,6 +65,9 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Request Logging
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  if (req.method === 'OPTIONS') {
+    console.log('  ↳ Preflight request from:', req.headers.origin);
+  }
   next();
 });
 
